@@ -1,0 +1,42 @@
+#!/usr/bin/ruby
+require_relative 'convert'
+
+doc = XML::Smart.open_unprotected ARGV[0]
+doc.register_namespace 'b', 'http://www.omg.org/spec/BPMN/20100524/MODEL'
+get_traces doc.find('//b:startEvent').first, traces = []
+
+places = []
+transitions = {}
+get_net(traces, places = [],transitions = {})
+
+edges = [];
+transitions.each do |k,v|
+  v.in.each do |i|
+    edges << "  #{i} -> #{k}"
+  end
+  v.ut.each do |o|
+    edges << "  #{k} -> #{o}"
+  end
+end
+
+puts <<~END
+  digraph G {
+    rankdir=LR;
+    ranksep=0.3;
+    normalize=true;
+    center=true; margin=1;
+    subgraph place {
+      node [shape=circle,fixedsize=true,label=" ", height=.3,width=.3];
+      S [label="&bull;", fontsize=20];
+      #{places.join('; ')};
+    }
+    subgraph transitions {
+      node [shape=rect,height=0.4,width=.4];
+      #{transitions.map{|k,v| k}.join('; ')};
+    }
+
+    #{edges.join(";\n").strip};
+  }
+END
+
+# ./visual Simple1.bpmn | dot -Tsvg > s1.svg

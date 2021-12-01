@@ -1,0 +1,9 @@
+#!/usr/bin/ruby
+require_relative 'traces'
+
+doc = XML::Smart.open_unprotected ARGV[0]
+doc.register_namespace 'b', 'http://www.omg.org/spec/BPMN/20100524/MODEL'
+get_traces doc.find('//b:startEvent').first, traces = []
+traces.each do |e|
+  puts e.map{|i|i.label.ljust(5)}.join(', ')
+end

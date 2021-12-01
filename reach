@@ -1,0 +1,52 @@
+#!/usr/bin/ruby
+require_relative 'convert'
+
+doc = XML::Smart.open_unprotected ARGV[0]
+doc.register_namespace 'b', 'http://www.omg.org/spec/BPMN/20100524/MODEL'
+get_traces doc.find('//b:startEvent').first, traces = []
+
+get_net(traces, places = [],transitions = {})
+marking = Hash[places.map{|v| [v,0]}]
+marking['S'] = 1
+
+markings = []
+explanations = {}
+markings << marking
+
+def rec(marking,markings,transitions,explanations)
+  down = []
+  marking.each do |p,m|
+    if m > 0
+      transitions.each do |tk,tv|
+        if firings = tv.find(p)
+          posmarks = marking.map{|mk,mv| mv > 0 ? mk : nil}.compact
+          if tv.in.length == 1 || (tv.in & posmarks) == posmarks
+            tm = marking.dup
+            tv.in.each do |ip|
+              tm[ip] = 0
+            end
+            firings.each do |e|
+              tm[e] = 1
+            end
+            explanations[marking] ||= []
+            explanations[marking] << tk
+            unless markings.find{|m| m.map{|_,i| i}.to_s == tm.map{|_,i| i}.to_s }
+              markings << tm
+              down << Proc.new do
+                rec(tm,markings,transitions,explanations)
+              end
+            end
+          end
+        end
+      end
+    end
+  end
+  down.each { |d| d.call }
+end
+
+rec(marking,markings,transitions,explanations)
+
+puts " " * 5 + places.map { |p| p.ljust(8) }.join('') + "Firing"
+markings.each_with_index do |m,i|
+  puts "#{(i+1).to_s.rjust(3)}: " + m.map{ |k,v| v.to_s.ljust(8) }.join('') + "#{explanations[m]&.uniq&.join(', ')}"
+end

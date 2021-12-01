@@ -1,0 +1,15 @@
+#!/usr/bin/ruby
+require_relative 'convert'
+
+doc = XML::Smart.open_unprotected ARGV[0]
+doc.register_namespace 'b', 'http://www.omg.org/spec/BPMN/20100524/MODEL'
+get_traces doc.find('//b:startEvent').first, traces = []
+
+places = []
+transitions = {}
+get_net(traces, places = [],transitions = {})
+
+puts places.map{ |i| "place \"#{i}\";"}.join("\n") + "\n\n"
+puts transitions.map{ |k,v| "trans \"#{k}\" in #{v.in.map{|i| "\"#{i}\""}.join(', ')} out #{v.ut.map{|i| "\"#{i}\""}.join(', ')};"}.join("\n") + "\n"
+
+# ./convert Simple1.bpmn > s1.tpn
